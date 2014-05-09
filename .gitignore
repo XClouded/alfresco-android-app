@@ -21,3 +21,6 @@ gen-external-apklibs
 target
 release.properties
 pom.xml.*
+alfresco-mobile-android/libs/android-support-v13.jar
+alfresco-mobile-android/libs/okhttp-1.5.3.jar
+alfresco-mobile-android/libs/picasso-2.2.0.jar
