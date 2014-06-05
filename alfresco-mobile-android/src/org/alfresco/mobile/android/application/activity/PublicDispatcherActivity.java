@@ -19,7 +19,14 @@ package org.alfresco.mobile.android.application.activity;
 
 import java.io.File;
 import java.util.List;
+import java.util.Locale;
 
+import org.alfresco.mobile.android.api.model.Document;
+import org.alfresco.mobile.android.api.model.ListingFilter;
+import org.alfresco.mobile.android.api.model.Node;
+import org.alfresco.mobile.android.api.model.Task;
+import org.alfresco.mobile.android.api.services.CommentService;
+import org.alfresco.mobile.android.api.services.WorkflowService;
 import org.alfresco.mobile.android.api.session.CloudSession;
 import org.alfresco.mobile.android.api.session.RepositorySession;
 import org.alfresco.mobile.android.application.R;
@@ -34,11 +41,15 @@ import org.alfresco.mobile.android.application.fragments.favorites.FavoritesSync
 import org.alfresco.mobile.android.application.fragments.fileexplorer.FileExplorerFragment;
 import org.alfresco.mobile.android.application.fragments.menu.MenuActionItem;
 import org.alfresco.mobile.android.application.fragments.operations.OperationsFragment;
+import org.alfresco.mobile.android.application.fragments.properties.DetailsFragment;
 import org.alfresco.mobile.android.application.fragments.sites.BrowserSitesFragment;
 import org.alfresco.mobile.android.application.fragments.upload.UploadFormFragment;
+import org.alfresco.mobile.android.application.fragments.workflow.task.TaskDetailsFragment;
+import org.alfresco.mobile.android.application.fragments.workflow.task.TasksFragment;
 import org.alfresco.mobile.android.application.intent.IntentIntegrator;
 import org.alfresco.mobile.android.application.preferences.PasscodePreferences;
 import org.alfresco.mobile.android.application.security.PassCodeActivity;
+import org.alfresco.mobile.android.application.utils.SessionUtils;
 import org.alfresco.mobile.android.application.utils.UIUtils;
 import org.alfresco.mobile.android.ui.fragments.BaseFragment;
 
@@ -49,8 +60,12 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
+import android.speech.tts.TextToSpeech;
+import android.speech.tts.TextToSpeech.OnInitListener;
+import android.text.TextUtils;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -63,10 +78,13 @@ import android.view.WindowManager;
  * 
  * @author Jean Marie Pascal
  */
-public class PublicDispatcherActivity extends BaseActivity
+public class PublicDispatcherActivity extends BaseActivity implements OnInitListener
 {
     private static final String TAG = PublicDispatcherActivity.class.getName();
-
+    
+    private boolean ready = false;
+    private TextToSpeech ttobj;
+    
     /** Define the type of importFolder. */
     private int uploadFolder;
 
@@ -86,6 +104,8 @@ public class PublicDispatcherActivity extends BaseActivity
     @Override
     public void onCreate(Bundle savedInstanceState)
     {
+        Intent intent = getIntent();
+        
         activateCheckPasscode = false;
 
         super.onCreate(savedInstanceState);
@@ -111,7 +131,7 @@ public class PublicDispatcherActivity extends BaseActivity
 
         setContentView(R.layout.app_left_panel);
 
-        String action = getIntent().getAction();
+        String action = intent.getAction();
         if ((Intent.ACTION_SEND.equals(action) || Intent.ACTION_SEND_MULTIPLE.equals(action)) && getFragment(UploadFormFragment.TAG) == null)
         {
             Fragment f = new UploadFormFragment();
@@ -130,19 +150,93 @@ public class PublicDispatcherActivity extends BaseActivity
 
         if (IntentIntegrator.ACTION_PICK_FILE.equals(action))
         {
-            if (getIntent().hasExtra(IntentIntegrator.EXTRA_ACCOUNT_ID))
+            if (intent.hasExtra(IntentIntegrator.EXTRA_ACCOUNT_ID))
             {
-                currentAccount = AccountManager.retrieveAccount(this, getIntent().getLongExtra(IntentIntegrator.EXTRA_ACCOUNT_ID, 1));
+                currentAccount = AccountManager.retrieveAccount(this, intent.getLongExtra(IntentIntegrator.EXTRA_ACCOUNT_ID, 1));
             }
             
             File f = Environment.getExternalStorageDirectory();
-            if (getIntent().hasExtra(IntentIntegrator.EXTRA_FOLDER))
+            if (intent.hasExtra(IntentIntegrator.EXTRA_FOLDER))
             {
-                f = (File) getIntent().getExtras().getSerializable(IntentIntegrator.EXTRA_FOLDER);
+                f = (File) intent.getExtras().getSerializable(IntentIntegrator.EXTRA_FOLDER);
                 Fragment fragment = FileExplorerFragment.newInstance(f, ListingModeFragment.MODE_PICK, true, 1);
                 FragmentDisplayer.replaceFragment(this, fragment, DisplayUtils.getLeftFragmentId(this),
                         FileExplorerFragment.TAG, false, false);
             }
+            
+            return;
+        }
+        
+        if (IntentIntegrator.ACTION_DISPLAY_NODE.equals(action))
+        {
+            if (intent.hasExtra(IntentIntegrator.EXTRA_ACCOUNT_ID))
+            {
+                currentAccount = AccountManager.retrieveAccount(this, intent.getLongExtra(IntentIntegrator.EXTRA_ACCOUNT_ID, 1));
+            }
+            
+            Node node = (Node)intent.getExtras().getParcelable(IntentIntegrator.EXTRA_NODE);
+
+            BaseFragment frag = DetailsFragment.newInstance((Document)node);
+            frag.setSession(SessionUtils.getSession(this));
+            FragmentDisplayer.replaceFragment(this, frag, getFragmentPlace(), DetailsFragment.TAG, false);
+            
+            return;
+        }
+        
+        if (IntentIntegrator.ACTION_DISPLAY_TASK.equals(action) ||
+            IntentIntegrator.ACTION_DISPLAY_TASK_ATTS.equals(action))
+        {
+            Task task = (Task)intent.getExtras().getSerializable(IntentIntegrator.EXTRA_TASK);
+            Process process = (Process)intent.getExtras().getSerializable(IntentIntegrator.EXTRA_PROCESS);
+            
+            BaseFragment frag = TaskDetailsFragment.newInstance(task);
+            frag.setSession(SessionUtils.getSession(this));
+            FragmentDisplayer.replaceFragment(this, frag, getFragmentPlace(), TaskDetailsFragment.TAG, false);
+            
+            //This code is WIP.
+            //NOTE: The TTS service doesn't function properly on Android 4.4.2, hence some experimental code here!
+            ttobj = new TextToSpeech(this, this);               
+            new Thread()
+            {
+                @Override
+                public void run()
+                {
+                    //while (ttobj == null || ttobj.getDefaultEngine() == null || ttobj.getDefaultEngine().length() == 0)
+                    {
+                        try {Thread.sleep(4000);} catch(Exception e) {}
+                    }
+                    
+                    ttobj.setLanguage(Locale.UK);
+                    
+                    ttobj.speak("Hello there, this is a test of the speech synthesis.  OK.  OK", TextToSpeech.QUEUE_FLUSH, null);
+                    
+                    super.run();
+                }
+                
+            }.start();
+            
+            return;
+        }
+        
+        String reply = intent.getStringExtra(IntentIntegrator.EXTRA_VOICE_REPLY);
+        if (!TextUtils.isEmpty(reply))
+        {
+            Node node = (Node)intent.getExtras().getSerializable(IntentIntegrator.EXTRA_NODE);
+            Task task = (Task)intent.getExtras().getSerializable(IntentIntegrator.EXTRA_TASK);
+            
+            if (node != null)
+            {
+                CommentService cs = getCurrentSession().getServiceRegistry().getCommentService();
+                
+                cs.addComment(node, reply);
+            }
+            else
+            if (task != null)
+            {
+                
+            }
+            
+            return;
         }
     }
 
@@ -340,5 +434,17 @@ public class PublicDispatcherActivity extends BaseActivity
                 return;
             }
         }
+    }
+    
+    @Override
+    public void onInit(int status)
+    {
+       if (status != TextToSpeech.ERROR)
+       {
+           //ttobj.setLanguage(Locale.UK);
+           //ready = true;
+           
+           //ttobj.speak("Hello there", TextToSpeech.QUEUE_FLUSH, null);
+       }     
     }
 }

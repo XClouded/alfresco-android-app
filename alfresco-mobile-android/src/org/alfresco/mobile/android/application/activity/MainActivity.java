@@ -87,6 +87,7 @@ import org.alfresco.mobile.android.application.security.PassCodeActivity;
 import org.alfresco.mobile.android.application.utils.ConnectivityUtils;
 import org.alfresco.mobile.android.application.utils.SessionUtils;
 import org.alfresco.mobile.android.application.utils.UIUtils;
+import org.alfresco.mobile.android.application.utils.WearTest;
 import org.alfresco.mobile.android.ui.fragments.BaseFragment;
 import org.alfresco.mobile.android.ui.manager.MessengerManager;
 
@@ -150,6 +151,8 @@ public class MainActivity extends BaseActivity
 
     private Intent callBackIntent = null;
         
+    private WearTest wear = null;
+    
     // ///////////////////////////////////////////////////////////////////////////
     // LIFE CYCLE
     // ///////////////////////////////////////////////////////////////////////////
@@ -220,6 +223,9 @@ public class MainActivity extends BaseActivity
         
         //Check if there is a Fujistu scanner intent coming back to us.
         checkScan();
+        
+        wear = new WearTest(this);
+        wear.taskListener();
     }
     
 
@@ -1003,6 +1009,19 @@ public class MainActivity extends BaseActivity
             case MenuActionItem.MENU_PROFILE:
                 PersonProfileFragment frag = PersonProfileFragment.newInstance(getCurrentAccount().getUsername());
                 frag.show(getFragmentManager(), PersonProfileFragment.TAG);
+                return true;
+                
+            case MenuActionItem.MENU_LISTEN_CHANGES:
+                if (((ChildrenBrowserFragment) getFragment(ChildrenBrowserFragment.TAG)) != null)
+                {
+                    Folder parentRepositoryFolder = ((ChildrenBrowserFragment) getFragment(ChildrenBrowserFragment.TAG)).getParent();
+                    
+                    MessengerManager.showLongToast(this, "Listening for changes...");
+                    wear.nodeListener (parentRepositoryFolder);
+                }
+                else
+                    MessengerManager.showLongToast (this, "No current folder");
+                
                 return true;
                 
             case MenuActionItem.MENU_DEVICE_CAPTURE_CAMERA_PHOTO:

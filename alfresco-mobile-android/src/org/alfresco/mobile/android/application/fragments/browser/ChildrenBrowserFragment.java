@@ -897,6 +897,9 @@ public class ChildrenBrowserFragment extends GridNavigationFragment implements R
             
             createMenu.add(Menu.NONE, MenuActionItem.MENU_DEVICE_SCAN_DOCUMENT, Menu.FIRST
                     + MenuActionItem.MENU_DEVICE_SCAN_DOCUMENT, R.string.scan_document);
+            
+            createMenu.add(Menu.NONE, MenuActionItem.MENU_LISTEN_CHANGES, Menu.FIRST
+                    + MenuActionItem.MENU_LISTEN_CHANGES, "Listen for changes");
         }
 
         if (actionMode)

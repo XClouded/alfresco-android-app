@@ -281,4 +281,16 @@ public interface IntentIntegrator extends PublicIntent
     // BROADCAST
     String ACTION_SEARCH_OPTION_SELECTED = "org.alfresco.mobile.android.intent.ACTION_SEARCH_OPTION_SELECTED";
 
+    //DISPLAY NODE ACTION
+    String ACTION_DISPLAY_NODE = "org.alfresco.mobile.android.intent.ACTION_DISPLAY_NODE";
+    String EXTRA_FOLDER_NAME = "org.alfresco.mobile.android.intent.EXTRA_FOLDER_NAME";
+    String EXTRA_NODE_NAME = "org.alfresco.mobile.android.intent.EXTRA_NODE_NAME";
+
+    //REPLY NODE ACTION
+    String ACTION_REPLY_NODE = null;
+    String EXTRA_VOICE_REPLY = "org.alfresco.mobile.android.intent.EXTRA_VOICE_REPLY";
+
+    //DISPLAY TASK ACTION
+    String ACTION_DISPLAY_TASK = "org.alfresco.mobile.android.intent.ACTION_DISPLAY_TASK";
+    String ACTION_DISPLAY_TASK_ATTS = "org.alfresco.mobile.android.intent.ACTION_DISPLAY_TASK_ATTS";
 }

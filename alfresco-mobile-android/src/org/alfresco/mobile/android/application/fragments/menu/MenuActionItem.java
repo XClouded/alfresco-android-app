@@ -142,6 +142,8 @@ public interface MenuActionItem
 
     int MENU_DEVICE_SCAN_DOCUMENT = 330;
     
+    int MENU_LISTEN_CHANGES = 340;
+    
     // ///////////////////////////////////////////
     // SITES
     // ///////////////////////////////////////////
@@ -232,5 +234,4 @@ public interface MenuActionItem
     int MENU_SETTINGS_ID = 4000;
     int MENU_HELP_ID = 4002;
     int MENU_ABOUT_ID = 4003;
-
 }
